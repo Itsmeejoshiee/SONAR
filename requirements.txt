@@ -21,3 +21,12 @@ pydub>=0.25.1
 
 # For model evaluation
 tensorboard>=2.6.0
+
+# Development dependencies
+pytest>=7.0.0
+jupyter>=1.0.0
+ipython>=8.0.0
+black>=22.0.0
+flake8>=4.0.0
+isort>=5.0.0
+mypy>=0.900

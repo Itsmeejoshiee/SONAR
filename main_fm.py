@@ -66,14 +66,23 @@ def main(args):
         model_name = "laion/clap-htsat-unfused"
         model = CLAP(model_name)
         sampling_rate = 48000
-    elif args.model == 'TrueAudio':
-        checkpoint_path = "/ast-checkpoint/checkpoint-epoch11/" 
+    elif args.model == 'ast':
+        # Update this path to point to your actual checkpoint directory
+        checkpoint_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ast-checkpoint/checkpoint-epoch11/checkpoint-174570")
+        print(f"Loading AST model from: {checkpoint_path}")
         model = AudioSpectrogramTransformer(checkpoint_path)
         sampling_rate = 16000
+        # Use the model's feature extractor instead of creating a new one
+        feature_extractor = model.feature_extractor
+        # Skip the rest of the model initialization below
+        model = model.to(device)
     else:
         raise ValueError(f"Model {args.model} not supported")
-    model = model.to(device)
-    feature_extractor = AutoFeatureExtractor.from_pretrained(model_name)
+        
+    # Only create a new feature extractor if not using AST model
+    if args.model != 'ast':
+        model = model.to(device)
+        feature_extractor = AutoFeatureExtractor.from_pretrained(model_name)
 
     wave_trn_loader, wave_dev_loader, wave_eval_loader = get_wavefake_loader('./data/wavefake', seed=args.seed, batch_size=args.batch_size)
     in_the_wild_loader = get_in_the_wild_loader("./data/in_the_wild/", seed=args.seed, batch_size=args.batch_size)

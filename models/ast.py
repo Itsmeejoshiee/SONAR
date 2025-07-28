@@ -1,7 +1,9 @@
 import torch
 import torch.nn as nn
-from transformers import ASTForAudioClassification
+from transformers import ASTForAudioClassification, ASTFeatureExtractor
 from transformers.modeling_outputs import SequenceClassifierOutput
+import os
+import json
 
 class ClassificationHead(nn.Module):
     def __init__(self, config):
@@ -20,33 +22,85 @@ class ClassificationHead(nn.Module):
         return x
 
 class AudioSpectrogramTransformer(nn.Module):
-    def __init__(self, model_name="MIT/ast-finetuned-audioset-10-10-0.4593", pooling_mode='mean'):
+    def __init__(self, checkpoint_path="ast-checkpoint/checkpoint-epoch11/checkpoint-174570"):
         super().__init__()
-        self.num_labels = 2  # Binary classification (real vs fake)
-        self.pooling_mode = pooling_mode
+        # Convert relative path to absolute path and normalize it
+        abs_checkpoint_path = os.path.abspath(checkpoint_path)
         
-        # Load the AST model
-        self.ast = ASTForAudioClassification.from_pretrained(
-            model_name,
-            num_labels=self.num_labels,
-            ignore_mismatched_sizes=True
-        )
-        
-        # Replace the classifier head with our own
-        self.ast.classifier = ClassificationHead(self.ast.config)
-        
-    def forward(self, input_features, attention_mask=None, labels=None, return_dict=None):
-        return_dict = return_dict if return_dict is not None else self.ast.config.use_return_dict
-        
-        # Forward pass through AST
-        outputs = self.ast(
-            input_values=input_features,
-            attention_mask=attention_mask,
-            labels=labels,
-            return_dict=return_dict
-        )
-        
-        if not return_dict:
-            return outputs[0]
+        # Check if the path exists
+        if not os.path.exists(abs_checkpoint_path):
+            raise ValueError(f"Checkpoint path does not exist: {abs_checkpoint_path}")
             
-        return outputs
+        print(f"Loading model from: {abs_checkpoint_path}")
+        
+        try:
+            # First try loading with local_files_only=False to download any missing files
+            self.model = ASTForAudioClassification.from_pretrained(abs_checkpoint_path, local_files_only=False)
+            self.feature_extractor = ASTFeatureExtractor.from_pretrained(abs_checkpoint_path, local_files_only=False)
+        except Exception as e:
+            print(f"Error loading with local_files_only=False: {e}")
+            print("Trying with local_files_only=True...")
+            # Fall back to local files only
+            self.model = ASTForAudioClassification.from_pretrained(abs_checkpoint_path, local_files_only=True)
+            self.feature_extractor = ASTFeatureExtractor.from_pretrained(abs_checkpoint_path, local_files_only=True)
+        
+        # Set model to evaluation mode
+        self.model.eval()
+        
+    def forward(self, input_values, attention_mask=None, labels=None, return_dict=None):
+        # Forward pass through the model
+        if attention_mask is not None:
+            # If attention_mask is provided, use it
+            return self.model(
+                input_values=input_values,
+                attention_mask=attention_mask,
+                labels=labels,
+                return_dict=return_dict
+            )
+        else:
+            # Otherwise, don't pass attention_mask
+            return self.model(
+                input_values=input_values,
+                labels=labels,
+                return_dict=return_dict
+            )
+    
+    def predict_audio(self, audio_path, device="cuda"):
+        # Load audio file
+        import librosa
+        audio, sr = librosa.load(audio_path, sr=self.feature_extractor.sampling_rate)
+
+        # Preprocess the audio
+        inputs = self.feature_extractor(
+            audio,
+            sampling_rate=self.feature_extractor.sampling_rate,
+            return_tensors="pt",
+            padding=True,
+            return_attention_mask=True
+        )
+
+        # Move inputs to the same device as the model
+        inputs = {k: v.to(device) for k, v in inputs.items()}
+        self.model = self.model.to(device)
+
+        # Make prediction
+        with torch.no_grad():
+            outputs = self.model(**inputs)
+            logits = outputs.logits
+            probabilities = torch.softmax(logits, dim=-1)
+
+        # Get predicted class (0 for fake, 1 for real)
+        predicted_class = torch.argmax(probabilities, dim=1).item()
+        confidence = probabilities[0][predicted_class].item()
+
+        # Map class index to label
+        label = "fake" if predicted_class == 0 else "real"
+
+        return {
+            "label": label,
+            "confidence": confidence,
+            "probabilities": {
+                "fake": probabilities[0][0].item(),
+                "real": probabilities[0][1].item()
+            }
+        }

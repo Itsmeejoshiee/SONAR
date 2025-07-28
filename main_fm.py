@@ -7,7 +7,7 @@ import torch
 from transformers import AutoFeatureExtractor
 from sklearn.metrics import roc_auc_score, f1_score, precision_score, recall_score
 from utils import compute_eer
-from models import Hubert, Wav2Vec2, Wav2Vec2BERT, Whisper, CLAP
+from models import Hubert, Wav2Vec2, Wav2Vec2BERT, Whisper, CLAP, AudioSpectrogramTransformer
 from data_utils import get_wavefake_loader, get_in_the_wild_loader, get_libri_loader, get_custom_loader
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -42,6 +42,7 @@ def run_validation(model, feature_extractor, data_loader, sr):
         recall = recall_score(labels_list, preds)
         f1 = f1_score(labels_list, preds)
         print(f'Validation Accuracy: {acc} \t F1: {f1} \t Precision: {prec} \t Recall: {recall}, AUROC: {auroc} \t EER: {eer}')
+        return acc, auroc, eer
 
 def main(args):
 
@@ -65,6 +66,10 @@ def main(args):
         model_name = "laion/clap-htsat-unfused"
         model = CLAP(model_name)
         sampling_rate = 48000
+    elif args.model == 'TrueAudio':
+        checkpoint_path = "/ast-checkpoint/checkpoint-epoch11/" 
+        model = AudioSpectrogramTransformer(checkpoint_path)
+        sampling_rate = 16000
     else:
         raise ValueError(f"Model {args.model} not supported")
     model = model.to(device)
@@ -79,18 +84,18 @@ def main(args):
     if args.eval:
 
         print("Start evaluating Wavefake")
-        run_validation(model, feature_extractor, wave_eval_loader,sr=sampling_rate)
+        acc, auroc, eer = run_validation(model, feature_extractor, wave_eval_loader,sr=sampling_rate)
         print("Start evaluating LibriSeVoc")
-        run_validation(model, feature_extractor, libri_eval_loader,sr=sampling_rate)
+        acc, auroc, eer = run_validation(model, feature_extractor, libri_eval_loader,sr=sampling_rate)
         print("Start evaluating In-the-wild")
-        run_validation(model, feature_extractor, in_the_wild_loader, sr=sampling_rate)
+        acc, auroc, eer = run_validation(model, feature_extractor, in_the_wild_loader, sr=sampling_rate)
 
         datasets = ['prompttts2', 'naturalspeech3', 'valle', 'voicebox', 'flashspeech', 'audiogen', 'xtts', 'seedtts',
                     'openai']
         for dataset in datasets:
             print(f"Evaluating {dataset}")
             eval_loader = get_custom_loader(1234, batch_size=16, dataset=dataset)  # Custom dataset
-            run_validation(model, eval_loader,sr=sampling_rate)
+            acc, auroc, eer = run_validation(model, feature_extractor, eval_loader,sr=sampling_rate)
 
         sys.exit(0)
 

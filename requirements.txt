@@ -1,0 +1,23 @@
+# Core Dependencies
+numpy>=1.21.0
+torch>=2.0.0
+torchaudio>=2.0.0
+scikit-learn>=1.0.0
+tqdm>=4.60.0
+librosa>=0.9.0
+transformers>=4.30.0
+soundfile>=0.10.0
+scipy>=1.7.0
+pandas>=1.3.0
+matplotlib>=3.4.0
+seaborn>=0.11.0
+
+# For AST Model
+timm>=0.6.0
+
+# For audio processing
+sounddevice>=0.4.0
+pydub>=0.25.1
+
+# For model evaluation
+tensorboard>=2.6.0

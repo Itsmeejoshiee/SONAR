@@ -220,7 +220,7 @@ def genWavefake_list(data_path, is_train=False, is_eval=False):
             d_meta[key] = 0
 
     # Get LJSpeech
-    real_datapath = './data/LJSpeech-1.1/wavs/'
+    real_datapath = os.path.join('data', 'LJSpeech-1.1', 'wavs')
     file_list = os.listdir(real_datapath)
     if is_train:
         file_list = file_list[:int(0.7 * len(file_list))]

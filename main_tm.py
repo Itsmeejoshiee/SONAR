@@ -72,9 +72,9 @@ def main(args: argparse.Namespace) -> None:
         model = nn.DataParallel(model)
 
     noise_scale = 0.05
-    wave_trn_loader, wave_dev_loader, wave_eval_loader = get_wavefake_loader('/home/mikiya/data/wavefake', seed=1234, batch_size=config["batch_size"])
-    in_the_wild_loader = get_in_the_wild_loader("/home/mikiya/data/in_the_wild/", seed=1234, batch_size=config['batch_size'],)
-    libri_trn_loader, libri_dev_loader, libri_eval_loader = get_libri_loader("/home/mikiya/data/LibriSeVoc/", seed=1234,batch_size=config['batch_size'])
+    wave_trn_loader, wave_dev_loader, wave_eval_loader = get_wavefake_loader('data/wavefake', seed=1234, batch_size=config["batch_size"])
+    in_the_wild_loader = get_in_the_wild_loader("data/in_the_wild", seed=1234, batch_size=config['batch_size'])
+    libri_trn_loader, libri_dev_loader, libri_eval_loader = get_libri_loader("data/LibriSeVoc", seed=1234, batch_size=config['batch_size'])
 
     if args.eval:
         state_dict = torch.load(config["model_path"], map_location=device)

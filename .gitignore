@@ -1,1 +1,4 @@
 sonar/
+data/
+__pycache__/
+sonar_exp_result/

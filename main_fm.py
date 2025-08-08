@@ -77,20 +77,30 @@ def main(args):
     optim = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
     if args.eval:
-
-        print("Start evaluating Wavefake")
-        run_validation(model, feature_extractor, wave_eval_loader,sr=sampling_rate)
-        print("Start evaluating LibriSeVoc")
-        run_validation(model, feature_extractor, libri_eval_loader,sr=sampling_rate)
-        print("Start evaluating In-the-wild")
-        run_validation(model, feature_extractor, in_the_wild_loader, sr=sampling_rate)
-
-        datasets = ['prompttts2', 'naturalspeech3', 'valle', 'voicebox', 'flashspeech', 'audiogen', 'xtts', 'seedtts',
-                    'openai']
-        for dataset in datasets:
-            print(f"Evaluating {dataset}")
-            eval_loader = get_custom_loader(1234, batch_size=16, dataset=dataset)  # Custom dataset
-            run_validation(model, eval_loader,sr=sampling_rate)
+        if args.dataset:
+            # Evaluate only the specified dataset
+            if args.dataset.lower() == 'wavefake':
+                print("Evaluating Wavefake")
+                run_validation(model, feature_extractor, wave_eval_loader, sr=sampling_rate)
+            elif args.dataset.lower() == 'libri':
+                print("Evaluating LibriSeVoc")
+                run_validation(model, feature_extractor, libri_eval_loader, sr=sampling_rate)
+            elif args.dataset.lower() == 'in_the_wild':
+                print("Evaluating In-the-wild")
+                run_validation(model, feature_extractor, in_the_wild_loader, sr=sampling_rate)
+            else:
+                # Handle custom datasets
+                print(f"Evaluating {args.dataset}")
+                eval_loader = get_custom_loader(args.seed, batch_size=args.batch_size, dataset=args.dataset)
+                run_validation(model, feature_extractor, eval_loader, sr=sampling_rate)
+        else:
+            # Default behavior: evaluate all datasets
+            print("Start evaluating Wavefake")
+            run_validation(model, feature_extractor, wave_eval_loader, sr=sampling_rate)
+            print("Start evaluating LibriSeVoc")
+            run_validation(model, feature_extractor, libri_eval_loader, sr=sampling_rate)
+            print("Start evaluating In-the-wild")
+            run_validation(model, feature_extractor, in_the_wild_loader, sr=sampling_rate)
 
         sys.exit(0)
 
@@ -138,8 +148,6 @@ def main(args):
     torch.save(model.state_dict(), f'{args.output_dir}/{args.model}_epoch_{args.epoch}_lr_{args.lr}_bs_{args.batch_size}.pth')
 
     print('finished')
-
-
 
 
 if __name__ == "__main__":

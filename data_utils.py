@@ -106,7 +106,17 @@ def get_custom_loader(seed: int,
         d_label_custom, file_custom = genCustom_list(database_path, fake=True)
     elif dataset == 'seedtts':
         database_path = './data/SONAR_dataset/SeedTTS/'
-        d_label_custom, file_custom = genCustom_list(database_path, fake=True)
+        en_files = [os.path.join(database_path, 'en', 'wavs', f) for f in os.listdir(os.path.join(database_path, 'en', 'wavs')) if f.endswith('.wav')]
+        zh_files = [os.path.join(database_path, 'zh', 'wavs', f) for f in os.listdir(os.path.join(database_path, 'zh', 'wavs')) if f.endswith('.wav')]
+        file_custom = en_files + zh_files
+        d_label_custom = {f: 0 for f in file_custom}  # All files are fake (0)
+        
+        # Add real samples
+        real_database = './data/SONAR_dataset/real_samples/'
+        real_files = [os.path.join(real_database, f) for f in os.listdir(real_database) if f.endswith('.wav')]
+        real_files = random.sample(real_files, min(len(file_custom), len(real_files)))  # Match number of fake samples
+        file_custom.extend(real_files)
+        d_label_custom.update({f: 1 for f in real_files})  # Real samples are labeled 1
 
     dataset = AudioDataset(list_IDs=file_custom,
                                labels=d_label_custom,

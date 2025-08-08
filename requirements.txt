@@ -69,9 +69,9 @@ tensorboard==2.18.0
 tensorboard-data-server==0.7.2
 threadpoolctl==3.5.0
 tokenizers==0.19.1
-torch==2.3.1
-torchaudio==2.3.1
-torchcontrib==0.0.2
+torch==2.3.1+cu118 --index-url https://download.pytorch.org/whl/cu118
+torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu118
+torchvision==0.18.1+cu118 --index-url https://download.pytorch.org/whl/cu118
 tqdm==4.66.4
 transformers==4.42.0
 typing-extensions==4.12.2
